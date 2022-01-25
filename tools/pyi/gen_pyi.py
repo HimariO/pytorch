@@ -92,6 +92,7 @@ blocklist = [
     'align_tensors',
     'meshgrid',
     'cartesian_prod',
+    'block',
     'block_diag',
     'norm',
     'chain_matmul',
