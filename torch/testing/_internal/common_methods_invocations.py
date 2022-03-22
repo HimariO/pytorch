@@ -2843,6 +2843,51 @@ def sample_inputs_block_diag(op_info, device, dtype, requires_grad, **kwargs):
 
     return samples
 
+def sample_inputs_block(op_info, device, dtype, requires_grad, **kwargs):
+    make_arg = partial(make_tensor, dtype=dtype, device=device, requires_grad=requires_grad)
+    test_cases: Tuple[tuple] = (
+        ([(1, S), (2, S), (3, S)], [[0, 0], [1, 0], [2, 0]], 2),
+        ([(S, 1), (S, 2), (S, 3)], [[0, 0], [0, 1], [1, 0]], 2),
+    )
+    def flatten(idx: List[List[int]]):
+        flat_list = []
+        for e in idx:
+            flat_list += e
+        return flat_list
+
+    samples: List[SampleInput] = []
+    for shapes, indies, dims in test_cases:
+        samples.append(SampleInput([make_arg(s) for s in shapes], args=(flatten(indies), dims)))
+
+    return samples
+
+# def sample_inputs_block(op_info, device, dtype, requires_grad, **kwargs):
+#     make_arg = partial(make_tensor, dtype=dtype, device=device, requires_grad=requires_grad)
+#     test_cases: List[tuple] = (
+#         [(1, S), (2, S), (3, S),],
+#         [[(S, S)], [(S, S)], [(S, S)],],
+#         [
+#             [(S, 1), (S, 2)],
+#             [(S, 3)],
+#         ],
+#         [
+#             [(2, 2), (2, 2)],
+#             [(2, 2), (2, 2)],
+#         ],
+#     )
+
+#     def build_nested(shapes: List[Union[tuple, list]]):
+#         if isinstance(shapes[0], list):
+#             return [build_nested(s) for s in shapes]
+#         else:
+#             return [make_arg(s) for s in shapes]
+
+#     samples: List[SampleInput] = []
+#     for shapes in test_cases:
+#         samples.append(SampleInput(build_nested(shapes)))
+
+#     return samples
+
 def sample_inputs_bitwise_shift(op_info, device, dtype, requires_grad, **kwargs):
     test_cases = (
         (S, S, S),
@@ -8809,6 +8854,19 @@ op_db: List[OpInfo] = [
                DecorateInfo(unittest.skip("Skipped!"), 'TestJit', 'test_variant_consistency_jit', dtypes=[torch.float32]),
            ),
            sample_inputs_func=sample_inputs_block_diag),
+    OpInfo('block',
+           dtypes=all_types_and_complex_and(torch.bool, torch.float16, torch.bfloat16),
+           supports_out=False,
+           supports_forward_ad=True,
+           supports_fwgrad_bwgrad=True,
+           skips=(
+               # JIT does not support variadic tensors.
+               # RuntimeError: input->type()->kind() == TypeKind::OptionalType
+               # INTERNAL ASSERT FAILED at "../torch/csrc/jit/passes/utils/check_alias_annotation.cpp":252,
+               # please report a bug to PyTorch.
+               DecorateInfo(unittest.skip("Skipped!"), 'TestJit', 'test_variant_consistency_jit', dtypes=[torch.float32]),
+           ),
+           sample_inputs_func=sample_inputs_block),
     BinaryUfuncInfo('bitwise_and',
                     dtypes=integral_types_and(torch.bool),
                     supports_autograd=False,
@@ -15492,6 +15550,22 @@ op_db: List[OpInfo] = [
         supports_forward_ad=True,
         supports_fwgrad_bwgrad=True,
     )
+]
+
+op_db: List[OpInfo] = [
+    OpInfo('block_flat',
+           dtypes=all_types_and_complex_and(torch.bool, torch.float16, torch.bfloat16),
+           supports_out=False,
+           supports_forward_ad=True,
+           supports_fwgrad_bwgrad=True,
+           skips=(
+               # JIT does not support variadic tensors.
+               # RuntimeError: input->type()->kind() == TypeKind::OptionalType
+               # INTERNAL ASSERT FAILED at "../torch/csrc/jit/passes/utils/check_alias_annotation.cpp":252,
+               # please report a bug to PyTorch.
+               DecorateInfo(unittest.skip("Skipped!"), 'TestJit', 'test_variant_consistency_jit', dtypes=[torch.float32]),
+           ),
+           sample_inputs_func=sample_inputs_block),
 ]
 
 # Common operator groupings

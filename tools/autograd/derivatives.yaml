@@ -340,6 +340,11 @@
   mat2: self.transpose(1, 2).conj().bmm(grad)
   result: self_t.bmm(mat2_p) + self_p.bmm(mat2_t)
 
+# - name: block(Tensor[] tensors, int[] indices, int idx_stride) -> (Tensor block_ten, Tensor slices)
+#   tensors: block_backward(grad, slices)
+#   output_differentiability: [true, false]
+  # block_ten: auto_linear
+
 - name: cat(Tensor[] tensors, int dim=0) -> Tensor
   tensors: cat_tensors_backward(grad, to_args_sizes(tensors), to_args_scalartypes(tensors), dim)
   result: cat_jvp(tensors, dim)

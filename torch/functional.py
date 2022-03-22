@@ -26,6 +26,7 @@ __all__ = [
     'cartesian_prod',
     'block_diag',
     'block',
+    'block_flat',
     'cdist',
     'chain_matmul',
     'einsum',
@@ -1298,6 +1299,12 @@ def block(nested_tensor_list: _type_nested_list) -> Tensor:
     if has_torch_function(tensors):
         return handle_torch_function(block, tensors, flat_idx, list_dim, *tensors)
     return torch._C._VariableFunctions.block(tensors, flat_idx, list_dim)  # type: ignore[attr-defined]
+
+
+def block_flat(tensors, flat_idx, list_dim) -> Tensor:
+    if has_torch_function(tensors):
+        return handle_torch_function(block, tensors, flat_idx, list_dim, *tensors)
+    return torch._C._VariableFunctions.block(tensors, flat_idx, list_dim)[0]  # type: ignore[attr-defined]
 
 
 def cdist(x1, x2, p=2., compute_mode='use_mm_for_euclid_dist_if_necessary'):

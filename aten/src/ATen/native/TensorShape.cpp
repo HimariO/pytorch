@@ -1644,7 +1644,7 @@ Tensor& dstack_out(TensorList tensors, Tensor& result) {
   return at::cat_out(result, rep, 2);
 }
 
-Tensor block(TensorList tensors, IntArrayRef indices, int64_t idx_stride) {
+std::tuple<Tensor, Tensor> block(TensorList tensors, IntArrayRef indices, int64_t idx_stride) {
   TORCH_CHECK(tensors.size() > 0,
            "block expects a non-empty TensorList");
   typedef c10::SmallVector<int64_t, 8> LowDimIdx;
@@ -1779,7 +1779,51 @@ Tensor block(TensorList tensors, IntArrayRef indices, int64_t idx_stride) {
     ten_slic.copy_(tensor);
   }
 
-  return result;
+  LowDimIdx slice_idx_shape{(int64_t)tensors.size(), result_dim, 2};
+  Tensor flat_slice = at::zeros(slice_idx_shape, at::ScalarType::Int);
+  for (auto i : c10::irange(tensors.size())) {
+    for (auto j : c10::irange(result_dim)) {
+      flat_slice[i][j][0] = slices_a[i][j];
+      flat_slice[i][j][1] = slices_b[i][j];
+    }
+  }
+  std::tuple<Tensor, Tensor> ret{result, flat_slice};
+  return ret;
+  
+  // std::vector<int64_t> flat_slice;
+  // for (auto i : c10::irange(tensors.size())) {
+  //   for (auto j : c10::irange(result_dim)) {
+  //     // flat_slice[i][j][0] = slices_a[i][j];
+  //     // flat_slice[i][j][1] = slices_b[i][j];
+  //     flat_slice.push_back(slices_a[i][j]);
+  //     flat_slice.push_back(slices_b[i][j]);
+  //   }
+  // }
+  
+  // std::tuple<Tensor, std::vector<int64_t>> ret{result, flat_slice};
+  // return ret;
+}
+
+std::vector<Tensor> block_backward(const Tensor& grad, const Tensor& slices) {
+  // slices will always be created in block, and alway  is Cpu Int tensor
+  auto num_ten = slices.size(0);
+  auto dim = slices.size(1);
+  std::vector<Tensor> grad_parts;
+  // auto raw = slices.item<int64_t>();
+  for (auto i : c10::irange(num_ten)) {
+    auto slice_dim = slices[i][0];
+    // Tensor grad_part = grad.slice(0, 0, 1);
+    Tensor grad_part = grad.slice(0, slice_dim[0].item<int64_t>(), slice_dim[1].item<int64_t>());
+    for (auto j : c10::irange(dim - 1)) {
+      slice_dim = slices[i][j + 1];
+      grad_part.slice(0, slice_dim[0].item<int64_t>(), slice_dim[1].item<int64_t>());
+    }
+    // auto tmp = grad.accessor<int64_t, 1>();
+    grad_parts.push_back(grad_part);
+  }
+  // TensorList results(grad_parts);
+  // return results;
+  return grad_parts;
 }
 
 static inline Tensor & sparse_transpose_(Tensor & self, int64_t dim0, int64_t dim1) {

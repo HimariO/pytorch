@@ -4201,8 +4201,15 @@
 
 - func: dstack.out(Tensor[] tensors, *, Tensor(a!) out) -> Tensor(a!)
 
-- func: block(Tensor[] tensors, int[] indices, int idx_stride) -> Tensor
+- func: block(Tensor[] tensors, int[] indices, int idx_stride) -> (Tensor block_ten, Tensor slices)
   variants: function
+  # dispatch:
+  #   CompositeExplicitAutograd: block
+
+- func: block_backward(Tensor grad, Tensor slices) -> Tensor[]
+  variants: function
+  device_check: NoCheck
+  device_guard: False
 
 # The signature is designed to be consistent with librosa except that it is
 # missing the `pad_mode` and `center` arguments, which are taken care of at
